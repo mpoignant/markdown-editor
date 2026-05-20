@@ -1,0 +1,26 @@
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-textarea {
+  flex: 1;
+  width: 100%;
+  padding: var(--spacing-lg);
+  font-family: var(--font-editor);
+  font-size: var(--font-size-editor);
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  tab-size: 2;
+  overflow-y: auto;
+}
+
+.editor-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.editor-textarea:focus {
+  outline: none;
+}
