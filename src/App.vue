@@ -21,7 +21,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
-import { readTextFile } from '@tauri-apps/plugin-fs'
+import { invoke } from '@tauri-apps/api/core'
 import { useEditorStore } from './stores/editor'
 import { useSettingsStore } from './stores/settings'
 import { useMarkdownParser } from './composables/useMarkdownParser'
@@ -71,21 +71,36 @@ onMounted(async () => {
       const path = paths[0]
       if (!path.match(/\.(md|markdown|txt)$/i)) return
 
-      if (editorStore.isDirty) {
-        const confirmed = window.confirm('Discard unsaved changes?')
-        if (!confirmed) return
-      }
-
-      const content = await readTextFile(path)
-      editorStore.openFile(path, content)
-
-      const win = getCurrentWindow()
-      await win.setTitle(editorStore.windowTitle)
+      await openFilePath(path)
     })
+
+    await listen('open-file', async (event) => {
+      const path = event.payload
+      if (path) await openFilePath(path)
+    })
+
+    // Check if app was launched with a file argument
+    const initialFile = await invoke('get_open_file_path')
+    if (initialFile) {
+      await openFilePath(initialFile)
+    }
   } catch (e) {
     // Events not available in browser dev mode
   }
 })
+
+async function openFilePath(path) {
+  if (editorStore.isDirty) {
+    const confirmed = window.confirm('Discard unsaved changes?')
+    if (!confirmed) return
+  }
+
+  const content = await invoke('read_file_content', { path })
+  editorStore.openFile(path, content)
+
+  const win = getCurrentWindow()
+  await win.setTitle(editorStore.windowTitle)
+}
 
 function onCursorMove(cursorLine) {
   const previewEl = previewRef.value?.wrapperRef
