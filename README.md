@@ -38,6 +38,7 @@ All formatting buttons work as toggles — click once to apply, click again to r
 
 ### File Management
 - **Open** files via dialog or drag & drop from Finder/Explorer
+- **File associations** — double-click `.md` files in Finder to open them directly in the app
 - **Save / Save As** with native system dialogs
 - Window title shows current filename with unsaved changes indicator (*)
 - Keyboard shortcuts: `Cmd/Ctrl+N`, `Cmd/Ctrl+O`, `Cmd/Ctrl+S`
@@ -101,6 +102,10 @@ markdown-editor/
 │   ├── src/                # App entry, plugin registration, native menu
 │   ├── capabilities/       # Permission configuration
 │   └── icons/              # App icons (all sizes)
+├── docs/                   # Project documentation
+│   ├── conversation.md     # Development log
+│   ├── Markdown_Editor_Desktop.md  # Original spec
+│   └── superpowers/plans/  # Implementation plan
 └── index.html              # Entry point
 ```
 
