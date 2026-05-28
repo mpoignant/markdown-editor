@@ -274,6 +274,33 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 
 ---
 
+## 19. Évaluation RGESN
+
+**Demande :** Évaluer le projet selon le Référentiel Général d'Écoconception des Services Numériques.
+
+**Résultat :** Score global de 4.5/5. Points forts : choix de Tauri (léger vs Electron), absence de réseau/serveur, architecture frontend sobre (5 composants, 371 lignes CSS). Rapport sauvegardé dans `docs/RGESN.md`.
+
+**Axes d'amélioration identifiés :**
+1. Prism.js — limiter aux langages utiles (déjà fait : 8 langages)
+2. Google Fonts — passer en polices système ou WOFF2 embarqué
+3. Lazy loading — charger AboutDialog et Prism à la demande
+4. Code splitting — séparer CodeMirror en chunk vendor
+
+---
+
+## 20. Lazy loading (axe RGESN n°3)
+
+**Demande :** Implémenter le lazy loading pour AboutDialog et Prism.js.
+
+**Implémentation :**
+- `AboutDialog` : chargé via `defineAsyncComponent()` — le chunk n'est téléchargé que quand l'utilisateur ouvre la boîte "À propos"
+- `Prism.js` : `useMarkdownParser` restructuré avec `watchEffect` async — Prism et ses langages ne sont importés dynamiquement qu'au premier rendu d'un bloc de code (détection via regex `` ```\w+ ``)
+- Le parsing Markdown sans code fonctionne sans charger Prism du tout
+
+**Résultat :** Startup plus rapide, Prism séparé en chunk indépendant dans le build.
+
+---
+
 ## Résumé technique final
 
 | Composant | Technologie |
