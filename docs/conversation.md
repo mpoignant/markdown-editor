@@ -200,6 +200,43 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 
 ---
 
+## 15. Contrôle de fermeture — sauvegarde non enregistrée
+
+**Demande :** Empêcher la perte de données en cas de fermeture accidentelle.
+
+**Solution :**
+- Interception de `onCloseRequested` sur la fenêtre Tauri
+- Appel systématique de `event.preventDefault()` (nécessaire car le handler async empêche sinon la fermeture normale)
+- Boîte de dialogue native via `message()` du plugin dialog avec boutons personnalisés : "Enregistrer", "Ne pas enregistrer", "Annuler"
+- Fermeture explicite via `win.destroy()` dans tous les cas sauf "Annuler"
+- Si "Enregistrer" et que le fichier n'existe pas encore → dialogue "Enregistrer sous" puis fermeture
+
+**Difficulté :** La valeur de retour de `message()` avec boutons personnalisés est le texte du label (ex: `"Enregistrer"`) et non les clés génériques (`"Yes"`, `"Cancel"`).
+
+**Permission ajoutée :** `core:window:allow-destroy` dans les capabilities.
+
+---
+
+## 16. Remplacement du textarea par CodeMirror 6
+
+**Problème :** Le Cmd+Z annulait tout le contenu d'un coup au lieu de revenir mot par mot. Le binding réactif et les modifications programmatiques détruisaient la pile undo native du textarea.
+
+**Solution choisie :** Remplacement complet du textarea par CodeMirror 6.
+
+**Packages installés :** `codemirror`, `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/lang-markdown`, `@codemirror/language-data`, `@codemirror/theme-one-dark`
+
+**Implémentation :**
+- `EditorPane.vue` réécrit avec `EditorView` + `EditorState`
+- Extension `history()` de `@codemirror/commands` pour undo/redo granulaire
+- Thème personnalisé utilisant les CSS custom properties existantes
+- Synchro bidirectionnelle avec le store Pinia (flag `ignoreUpdate` pour éviter les boucles)
+- Fonctions exposées (`insertText`, `toggleInlineFormat`, `insertLinePrefix`, `insertBlock`) réécrites avec l'API CodeMirror (`view.dispatch`)
+- Line wrapping activé, gutters masqués
+
+**Problème annexe :** Le dossier `src-tauri/target/doc/` (312 Mo de docs Rust générées) saturait le file watcher de Vite, empêchant le dev server de répondre. Fix : exclusion de `**/src-tauri/**` dans `vite.config.js` + suppression des docs.
+
+---
+
 ## Résumé technique final
 
 | Composant | Technologie |
@@ -208,8 +245,8 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 | Frontend | Vite + Vue.js 3 (Composition API) |
 | State | Pinia |
 | Styling | Vanilla CSS (custom properties) |
-| Markdown | marked.js |
-| Syntax highlighting | Prism.js |
+| Markdown | marked.js (preview), CodeMirror 6 (éditeur) |
+| Syntax highlighting | Prism.js (preview), CodeMirror lang-markdown (éditeur) |
 | Plugins Tauri | fs, dialog, shell |
 | Packaging | .app/.dmg (macOS), .msi (Windows), .AppImage/.deb (Linux) |
 
