@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { defineAsyncComponent, ref, computed, watch, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
@@ -34,7 +34,7 @@ import Toolbar from './components/Toolbar.vue'
 import EditorPane from './components/EditorPane.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import StatusBar from './components/StatusBar.vue'
-import AboutDialog from './components/AboutDialog.vue'
+const AboutDialog = defineAsyncComponent(() => import('./components/AboutDialog.vue'))
 
 const editorStore = useEditorStore()
 const settingsStore = useSettingsStore()
