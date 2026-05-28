@@ -78,7 +78,20 @@ pub fn run() {
                 .item(&MenuItemBuilder::with_id("task-list", "Task List").accelerator("CmdOrCtrl+Shift+9").build(app)?)
                 .build()?;
 
+            let app_menu = SubmenuBuilder::new(app, "Markdown Editor")
+                .item(&MenuItemBuilder::with_id("about", "About Markdown Editor").build(app)?)
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()?;
+
             let menu = MenuBuilder::new(app)
+                .item(&app_menu)
                 .item(&file_menu)
                 .item(&edit_menu)
                 .item(&format_menu)
@@ -89,7 +102,8 @@ pub fn run() {
             app.on_menu_event(move |app_handle, event| {
                 let id = event.id().0.as_str();
                 match id {
-                    "new" | "open" | "save" | "save-as"
+                    "about"
+                    | "new" | "open" | "save" | "save-as"
                     | "bold" | "italic" | "strikethrough" | "code"
                     | "link" | "image" | "blockquote"
                     | "ordered-list" | "list" | "task-list"

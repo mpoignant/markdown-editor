@@ -261,6 +261,19 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 
 ---
 
+## 18. Dialogue "À propos"
+
+**Demande :** Ajouter un dialogue "À propos" complet avec nom, version, icône, description, auteur, licence, lien GitHub et crédits.
+
+**Implémentation :**
+- Menu natif macOS "Markdown Editor" avec item "About Markdown Editor" ajouté côté Rust
+- Composant `AboutDialog.vue` affiché en overlay (modal) avec backdrop
+- Contenu : icône, nom, version 1.0.0, description, auteur (Mathieu Poignant), licence GPL v3, lien GitHub (ouvert via `@tauri-apps/plugin-shell`), crédits (Tauri 2, Vue.js 3, CodeMirror 6, marked.js)
+- Fermeture par clic sur OK, clic sur le backdrop, ou touche Escape
+- Icône copiée dans le dossier `public/` pour être accessible au frontend
+
+---
+
 ## Résumé technique final
 
 | Composant | Technologie |

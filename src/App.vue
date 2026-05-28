@@ -14,6 +14,7 @@
       </div>
     </div>
     <StatusBar />
+    <AboutDialog ref="aboutRef" />
   </div>
 </template>
 
@@ -33,6 +34,7 @@ import Toolbar from './components/Toolbar.vue'
 import EditorPane from './components/EditorPane.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import StatusBar from './components/StatusBar.vue'
+import AboutDialog from './components/AboutDialog.vue'
 
 const editorStore = useEditorStore()
 const settingsStore = useSettingsStore()
@@ -42,6 +44,7 @@ const { html: renderedHtml } = useMarkdownParser(source)
 
 const editorRef = ref(null)
 const previewRef = ref(null)
+const aboutRef = ref(null)
 const { syncCursorToPreview } = useSyncScroll()
 
 const { newFile, openFile, saveFile, saveFileAs } = useFileOperations()
@@ -84,6 +87,12 @@ onMounted(async () => {
 
     await listen('menu-event', (event) => {
       const payload = event.payload
+
+      if (payload === 'about') {
+        aboutRef.value?.show()
+        return
+      }
+
       const actions = {
         'new': newFile,
         'open': openFile,
