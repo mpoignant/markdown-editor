@@ -22,6 +22,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { message } from '@tauri-apps/plugin-dialog'
 import { useEditorStore } from './stores/editor'
 import { useSettingsStore } from './stores/settings'
 import { useMarkdownParser } from './composables/useMarkdownParser'
@@ -53,6 +54,34 @@ useKeyboardShortcuts({
 
 onMounted(async () => {
   try {
+    const win = getCurrentWindow()
+    await win.onCloseRequested(async (event) => {
+      event.preventDefault()
+
+      if (!editorStore.isDirty) {
+        await win.destroy()
+        return
+      }
+
+      const result = await message(
+        'Le document a été modifié. Voulez-vous enregistrer avant de quitter ?',
+        {
+          title: 'Modifications non enregistrées',
+          kind: 'warning',
+          buttons: { yes: 'Enregistrer', no: 'Ne pas enregistrer', cancel: 'Annuler' },
+        }
+      )
+
+      if (result === 'Enregistrer') {
+        await saveFile()
+        if (!editorStore.isDirty) {
+          await win.destroy()
+        }
+      } else if (result !== 'Annuler') {
+        await win.destroy()
+      }
+    })
+
     await listen('menu-event', (event) => {
       const actions = {
         'new': newFile,
