@@ -1,21 +1,14 @@
 <template>
-  <div class="editor-wrapper">
-    <textarea
-      ref="textareaRef"
-      class="editor-textarea"
-      :style="{ fontFamily: settingsStore.editorFont }"
-      @input="onInput"
-      @keyup="onCursorMove"
-      @click="onCursorMove"
-      @keydown.tab.prevent="onTab"
-      placeholder="Start writing Markdown..."
-      spellcheck="false"
-    ></textarea>
-  </div>
+  <div class="editor-wrapper" ref="wrapperRef"></div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { EditorState } from '@codemirror/state'
+import { EditorView, keymap, placeholder } from '@codemirror/view'
+import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands'
+import { markdown } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
 import { useEditorStore } from '../stores/editor'
 import { useSettingsStore } from '../stores/settings'
 
@@ -23,161 +16,195 @@ const emit = defineEmits(['cursor-move'])
 const editorStore = useEditorStore()
 const settingsStore = useSettingsStore()
 
-const textareaRef = ref(null)
-let ignoreNextInput = false
+const wrapperRef = ref(null)
+let view = null
+let ignoreUpdate = false
+
+const theme = EditorView.theme({
+  '&': {
+    height: '100%',
+    fontSize: 'var(--font-size-editor)',
+  },
+  '.cm-scroller': {
+    fontFamily: 'var(--font-editor)',
+    lineHeight: '1.6',
+    padding: 'var(--spacing-lg)',
+    overflow: 'auto',
+  },
+  '.cm-content': {
+    caretColor: 'var(--color-text-primary)',
+  },
+  '.cm-cursor': {
+    borderLeftColor: 'var(--color-text-primary)',
+  },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+    backgroundColor: 'var(--color-bg-tertiary)',
+  },
+  '.cm-gutters': {
+    display: 'none',
+  },
+  '&.cm-focused': {
+    outline: 'none',
+  },
+})
+
+const themeColors = EditorView.baseTheme({
+  '&.cm-editor': {
+    backgroundColor: 'var(--color-bg-primary)',
+    color: 'var(--color-text-primary)',
+  },
+})
+
+function createState(doc) {
+  return EditorState.create({
+    doc,
+    extensions: [
+      history(),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
+      markdown({ codeLanguages: languages }),
+      placeholder('Start writing Markdown...'),
+      theme,
+      themeColors,
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged && !ignoreUpdate) {
+          editorStore.setContent(update.state.doc.toString())
+        }
+        if (update.selectionSet) {
+          const pos = update.state.selection.main.head
+          const line = update.state.doc.lineAt(pos).number - 1
+          emit('cursor-move', line)
+        }
+      }),
+      EditorView.lineWrapping,
+    ],
+  })
+}
 
 onMounted(() => {
-  if (textareaRef.value) {
-    textareaRef.value.value = editorStore.content
+  view = new EditorView({
+    state: createState(editorStore.content),
+    parent: wrapperRef.value,
+  })
+})
+
+onBeforeUnmount(() => {
+  if (view) {
+    view.destroy()
+    view = null
   }
 })
 
 watch(() => editorStore.content, (newVal) => {
-  const textarea = textareaRef.value
-  if (!textarea) return
-  if (textarea.value !== newVal) {
-    ignoreNextInput = true
-    textarea.value = newVal
+  if (!view) return
+  const current = view.state.doc.toString()
+  if (current !== newVal) {
+    ignoreUpdate = true
+    view.dispatch({
+      changes: { from: 0, to: current.length, insert: newVal },
+    })
+    ignoreUpdate = false
   }
 })
 
-function onInput(event) {
-  if (ignoreNextInput) {
-    ignoreNextInput = false
-    return
-  }
-  editorStore.setContent(event.target.value)
-  onCursorMove(event)
-}
-
-function onCursorMove(event) {
-  const textarea = event.target || textareaRef.value
-  if (!textarea) return
-  const pos = textarea.selectionStart
-  const textBefore = textarea.value.substring(0, pos)
-  const line = textBefore.split('\n').length - 1
-  emit('cursor-move', line)
-}
-
-function onTab(event) {
-  const textarea = event.target
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-
-  textarea.focus()
-  textarea.setSelectionRange(start, end)
-  document.execCommand('insertText', false, '  ')
-
-  editorStore.setContent(textarea.value)
-}
+watch(() => settingsStore.editorFont, (font) => {
+  if (!view) return
+  view.dispatch({
+    effects: EditorView.editorAttributes.reconfigure(
+      EditorView.editorAttributes.of({ style: `font-family: ${font}` })
+    ),
+  })
+})
 
 function insertText(before, after = '') {
-  const textarea = textareaRef.value
-  if (!textarea) return
-
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const selected = textarea.value.substring(start, end)
+  if (!view) return
+  const { from, to } = view.state.selection.main
+  const selected = view.state.sliceDoc(from, to)
   const replacement = before + selected + after
-
-  textarea.focus()
-  textarea.setSelectionRange(start, end)
-  document.execCommand('insertText', false, replacement)
-
-  editorStore.setContent(textarea.value)
-
-  const cursorPos = start + before.length + selected.length
-  textarea.setSelectionRange(start + before.length, cursorPos)
+  view.dispatch({
+    changes: { from, to, insert: replacement },
+    selection: { anchor: from + before.length, head: from + before.length + selected.length },
+  })
+  view.focus()
 }
 
 function toggleInlineFormat(marker) {
-  const textarea = textareaRef.value
-  if (!textarea) return
-
-  const value = textarea.value
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
+  if (!view) return
+  const { from, to } = view.state.selection.main
+  const doc = view.state.doc.toString()
   const len = marker.length
 
-  const beforeMarker = value.substring(start - len, start)
-  const afterMarker = value.substring(end, end + len)
-
-  textarea.focus()
+  const beforeMarker = doc.substring(from - len, from)
+  const afterMarker = doc.substring(to, to + len)
 
   if (beforeMarker === marker && afterMarker === marker) {
-    // Remove markers around selection
-    textarea.setSelectionRange(start - len, end + len)
-    const selected = value.substring(start, end)
-    document.execCommand('insertText', false, selected)
-    editorStore.setContent(textarea.value)
-    textarea.setSelectionRange(start - len, end - len)
+    const selected = doc.substring(from, to)
+    view.dispatch({
+      changes: { from: from - len, to: to + len, insert: selected },
+      selection: { anchor: from - len, head: from - len + selected.length },
+    })
   } else {
-    // Check if selection itself starts/ends with marker
-    const selected = value.substring(start, end)
+    const selected = doc.substring(from, to)
     if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= len * 2) {
       const inner = selected.substring(len, selected.length - len)
-      textarea.setSelectionRange(start, end)
-      document.execCommand('insertText', false, inner)
-      editorStore.setContent(textarea.value)
-      textarea.setSelectionRange(start, start + inner.length)
+      view.dispatch({
+        changes: { from, to, insert: inner },
+        selection: { anchor: from, head: from + inner.length },
+      })
     } else {
-      // Add markers
       insertText(marker, marker)
     }
   }
+  view.focus()
 }
 
 function insertLinePrefix(prefix) {
-  const textarea = textareaRef.value
-  if (!textarea) return
+  if (!view) return
+  const { from, to } = view.state.selection.main
+  const doc = view.state.doc.toString()
 
-  const value = textarea.value
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
+  const lineStart = doc.lastIndexOf('\n', from - 1) + 1
+  let lineEnd = doc.indexOf('\n', to)
+  if (lineEnd === -1) lineEnd = doc.length
 
-  // Find the start of the current line
-  const lineStart = value.lastIndexOf('\n', start - 1) + 1
-  // Find the end of the last selected line
-  let lineEnd = value.indexOf('\n', end)
-  if (lineEnd === -1) lineEnd = value.length
-
-  const selectedLines = value.substring(lineStart, lineEnd)
+  const selectedLines = doc.substring(lineStart, lineEnd)
   const lines = selectedLines.split('\n')
 
-  // Check if all lines already have the prefix — if so, remove it
   const allHavePrefix = lines.every(l => l.startsWith(prefix))
+  const replacement = allHavePrefix
+    ? lines.map(l => l.substring(prefix.length)).join('\n')
+    : lines.map(l => prefix + l).join('\n')
 
-  let replacement
-  if (allHavePrefix) {
-    replacement = lines.map(l => l.substring(prefix.length)).join('\n')
-  } else {
-    replacement = lines.map(l => prefix + l).join('\n')
-  }
-
-  textarea.focus()
-  textarea.setSelectionRange(lineStart, lineEnd)
-  document.execCommand('insertText', false, replacement)
-  editorStore.setContent(textarea.value)
-  textarea.setSelectionRange(lineStart, lineStart + replacement.length)
+  view.dispatch({
+    changes: { from: lineStart, to: lineEnd, insert: replacement },
+    selection: { anchor: lineStart, head: lineStart + replacement.length },
+  })
+  view.focus()
 }
 
 function insertBlock(block) {
-  const textarea = textareaRef.value
-  if (!textarea) return
+  if (!view) return
+  const { from, to } = view.state.selection.main
+  const doc = view.state.doc.toString()
+  const selected = doc.substring(from, to)
 
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const selected = textarea.value.substring(start, end)
-
-  const before = start > 0 && textarea.value[start - 1] !== '\n' ? '\n' : ''
-  const after = end < textarea.value.length && textarea.value[end] !== '\n' ? '\n' : ''
+  const before = from > 0 && doc[from - 1] !== '\n' ? '\n' : ''
+  const after = to < doc.length && doc[to] !== '\n' ? '\n' : ''
   const replacement = before + block.replace('$1', selected) + after
 
-  textarea.focus()
-  textarea.setSelectionRange(start, end)
-  document.execCommand('insertText', false, replacement)
-  editorStore.setContent(textarea.value)
+  view.dispatch({
+    changes: { from, to, insert: replacement },
+  })
+  view.focus()
 }
 
-defineExpose({ textareaRef, insertText, toggleInlineFormat, insertLinePrefix, insertBlock })
+function undoEditor() {
+  if (view) undo(view)
+}
+
+function redoEditor() {
+  if (view) redo(view)
+}
+
+defineExpose({ wrapperRef, insertText, toggleInlineFormat, insertLinePrefix, insertBlock, undoEditor, redoEditor })
 </script>
+
