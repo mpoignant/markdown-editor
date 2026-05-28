@@ -55,12 +55,26 @@ const themeColors = EditorView.baseTheme({
   },
 })
 
+const formatKeymap = [
+  { key: 'Mod-b', run: () => { toggleInlineFormat('**'); return true } },
+  { key: 'Mod-i', run: () => { toggleInlineFormat('_'); return true } },
+  { key: 'Mod-Shift-x', run: () => { toggleInlineFormat('~~'); return true } },
+  { key: 'Mod-e', run: () => { toggleInlineFormat('`'); return true } },
+  { key: 'Mod-k', run: () => { insertText('[', '](url)'); return true } },
+  { key: 'Mod-Shift-k', run: () => { insertText('![', '](url)'); return true } },
+  { key: 'Mod-Shift-.', run: () => { insertLinePrefix('> '); return true } },
+  { key: 'Mod-Shift-7', run: () => { insertLinePrefix('1. '); return true } },
+  { key: 'Mod-Shift-8', run: () => { insertLinePrefix('- '); return true } },
+  { key: 'Mod-Shift-9', run: () => { insertLinePrefix('- [ ] '); return true } },
+  { key: 'Mod-Shift-h', run: () => { insertLinePrefix('## '); return true } },
+]
+
 function createState(doc) {
   return EditorState.create({
     doc,
     extensions: [
       history(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      keymap.of([...formatKeymap, ...defaultKeymap, ...historyKeymap]),
       markdown({ codeLanguages: languages }),
       placeholder('Start writing Markdown...'),
       theme,
@@ -181,6 +195,26 @@ function insertLinePrefix(prefix) {
   view.focus()
 }
 
+function setHeadingLevel(level) {
+  if (!view) return
+  const { from } = view.state.selection.main
+  const doc = view.state.doc.toString()
+  const lineStart = doc.lastIndexOf('\n', from - 1) + 1
+  let lineEnd = doc.indexOf('\n', from)
+  if (lineEnd === -1) lineEnd = doc.length
+
+  const line = doc.substring(lineStart, lineEnd)
+  const stripped = line.replace(/^#{1,6}\s*/, '')
+  const prefix = '#'.repeat(level) + ' '
+  const replacement = prefix + stripped
+
+  view.dispatch({
+    changes: { from: lineStart, to: lineEnd, insert: replacement },
+    selection: { anchor: lineStart + replacement.length },
+  })
+  view.focus()
+}
+
 function insertBlock(block) {
   if (!view) return
   const { from, to } = view.state.selection.main
@@ -205,6 +239,6 @@ function redoEditor() {
   if (view) redo(view)
 }
 
-defineExpose({ wrapperRef, insertText, toggleInlineFormat, insertLinePrefix, insertBlock, undoEditor, redoEditor })
+defineExpose({ wrapperRef, insertText, toggleInlineFormat, insertLinePrefix, insertBlock, setHeadingLevel, undoEditor, redoEditor })
 </script>
 

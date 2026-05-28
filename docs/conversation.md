@@ -237,6 +237,30 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 
 ---
 
+## 17. Raccourcis clavier de formatage
+
+**Demande :** Ajouter des raccourcis clavier pour la mise en forme Markdown.
+
+**Raccourcis implémentés :**
+- Cmd+B — Gras
+- Cmd+I — Italique
+- Cmd+Shift+X — Barré
+- Cmd+E — Code inline
+- Cmd+K — Lien
+- Cmd+Shift+K — Image
+- Cmd+Shift+. — Blockquote
+- Cmd+Shift+7 — Liste ordonnée
+- Cmd+Shift+8 — Liste à puces
+- Cmd+Shift+9 — Liste de tâches
+- Cmd+Shift+H — Header ##
+- Cmd+1 à 6 — H1 à H6
+
+**Problème :** Cmd+3 et Cmd+4 ne fonctionnaient pas — macOS/WebKit interceptait ces raccourcis avant que le keydown n'arrive au JavaScript (même avec `capture: true` sur le listener).
+
+**Solution :** Enregistrement de tous les raccourcis de formatage dans un menu natif Rust "Format" avec des accélérateurs (`CmdOrCtrl+1` etc.). Les événements menu sont transmis au frontend via `app.emit("menu-event", id)` et traités dans le listener existant. Les headings Cmd+1-6 passent par le menu natif, les autres raccourcis sont gérés à la fois par le keymap CodeMirror et le menu natif.
+
+---
+
 ## Résumé technique final
 
 | Composant | Technologie |

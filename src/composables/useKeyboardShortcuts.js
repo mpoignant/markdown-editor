@@ -17,10 +17,10 @@ export function useKeyboardShortcuts(actions) {
   }
 
   onMounted(() => {
-    window.addEventListener('keydown', handler)
+    window.addEventListener('keydown', handler, true)
   })
 
   onUnmounted(() => {
-    window.removeEventListener('keydown', handler)
+    window.removeEventListener('keydown', handler, true)
   })
 }

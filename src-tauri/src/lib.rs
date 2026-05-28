@@ -1,4 +1,4 @@
-use tauri::menu::{MenuBuilder, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager, RunEvent};
 use std::sync::Mutex;
 
@@ -56,9 +56,32 @@ pub fn run() {
                 .select_all()
                 .build()?;
 
+            let format_menu = SubmenuBuilder::new(app, "Format")
+                .item(&MenuItemBuilder::with_id("heading-1", "Heading 1").accelerator("CmdOrCtrl+1").build(app)?)
+                .item(&MenuItemBuilder::with_id("heading-2", "Heading 2").accelerator("CmdOrCtrl+2").build(app)?)
+                .item(&MenuItemBuilder::with_id("heading-3", "Heading 3").accelerator("CmdOrCtrl+3").build(app)?)
+                .item(&MenuItemBuilder::with_id("heading-4", "Heading 4").accelerator("CmdOrCtrl+4").build(app)?)
+                .item(&MenuItemBuilder::with_id("heading-5", "Heading 5").accelerator("CmdOrCtrl+5").build(app)?)
+                .item(&MenuItemBuilder::with_id("heading-6", "Heading 6").accelerator("CmdOrCtrl+6").build(app)?)
+                .separator()
+                .item(&MenuItemBuilder::with_id("bold", "Bold").accelerator("CmdOrCtrl+B").build(app)?)
+                .item(&MenuItemBuilder::with_id("italic", "Italic").accelerator("CmdOrCtrl+I").build(app)?)
+                .item(&MenuItemBuilder::with_id("strikethrough", "Strikethrough").accelerator("CmdOrCtrl+Shift+X").build(app)?)
+                .item(&MenuItemBuilder::with_id("code", "Code").accelerator("CmdOrCtrl+E").build(app)?)
+                .separator()
+                .item(&MenuItemBuilder::with_id("link", "Link").accelerator("CmdOrCtrl+K").build(app)?)
+                .item(&MenuItemBuilder::with_id("image", "Image").accelerator("CmdOrCtrl+Shift+K").build(app)?)
+                .separator()
+                .item(&MenuItemBuilder::with_id("blockquote", "Blockquote").accelerator("CmdOrCtrl+Shift+.").build(app)?)
+                .item(&MenuItemBuilder::with_id("ordered-list", "Ordered List").accelerator("CmdOrCtrl+Shift+7").build(app)?)
+                .item(&MenuItemBuilder::with_id("list", "Bullet List").accelerator("CmdOrCtrl+Shift+8").build(app)?)
+                .item(&MenuItemBuilder::with_id("task-list", "Task List").accelerator("CmdOrCtrl+Shift+9").build(app)?)
+                .build()?;
+
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
+                .item(&format_menu)
                 .build()?;
 
             app.set_menu(menu)?;
@@ -66,7 +89,12 @@ pub fn run() {
             app.on_menu_event(move |app_handle, event| {
                 let id = event.id().0.as_str();
                 match id {
-                    "new" | "open" | "save" | "save-as" => {
+                    "new" | "open" | "save" | "save-as"
+                    | "bold" | "italic" | "strikethrough" | "code"
+                    | "link" | "image" | "blockquote"
+                    | "ordered-list" | "list" | "task-list"
+                    | "heading-1" | "heading-2" | "heading-3"
+                    | "heading-4" | "heading-5" | "heading-6" => {
                         let _ = app_handle.emit("menu-event", id);
                     }
                     _ => {}

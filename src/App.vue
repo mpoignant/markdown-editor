@@ -83,14 +83,42 @@ onMounted(async () => {
     })
 
     await listen('menu-event', (event) => {
+      const payload = event.payload
       const actions = {
         'new': newFile,
         'open': openFile,
         'save': saveFile,
         'save-as': saveFileAs,
       }
-      const action = actions[event.payload]
-      if (action) action()
+      const action = actions[payload]
+      if (action) {
+        action()
+        return
+      }
+
+      const editor = editorRef.value
+      if (!editor) return
+
+      const headingMatch = payload.match(/^heading-(\d)$/)
+      if (headingMatch) {
+        editor.setHeadingLevel(parseInt(headingMatch[1]))
+        return
+      }
+
+      const formatActions = {
+        'bold': () => editor.toggleInlineFormat('**'),
+        'italic': () => editor.toggleInlineFormat('_'),
+        'strikethrough': () => editor.toggleInlineFormat('~~'),
+        'code': () => editor.toggleInlineFormat('`'),
+        'link': () => editor.insertText('[', '](url)'),
+        'image': () => editor.insertText('![', '](url)'),
+        'blockquote': () => editor.insertLinePrefix('> '),
+        'ordered-list': () => editor.insertLinePrefix('1. '),
+        'list': () => editor.insertLinePrefix('- '),
+        'task-list': () => editor.insertLinePrefix('- [ ] '),
+      }
+      const fmt = formatActions[payload]
+      if (fmt) fmt()
     })
 
     await listen('tauri://drag-drop', async (event) => {
