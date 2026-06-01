@@ -1,7 +1,7 @@
 {
-  "productName": "Markdown Editor",
+  "productName": "Markdown Live",
   "version": "1.0.0",
-  "identifier": "com.markdowneditor.desktop",
+  "identifier": "com.markdownlive.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Markdown Editor",
+        "title": "Markdown Live",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

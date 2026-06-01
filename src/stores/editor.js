@@ -17,7 +17,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   const windowTitle = computed(() => {
     const prefix = isDirty.value ? '* ' : ''
-    return `${prefix}${fileName.value} — Markdown Editor`
+    return `${prefix}${fileName.value} — Markdown Live`
   })
 
   function setContent(text) {

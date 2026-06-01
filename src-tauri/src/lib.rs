@@ -78,8 +78,8 @@ pub fn run() {
                 .item(&MenuItemBuilder::with_id("task-list", "Task List").accelerator("CmdOrCtrl+Shift+9").build(app)?)
                 .build()?;
 
-            let app_menu = SubmenuBuilder::new(app, "Markdown Editor")
-                .item(&MenuItemBuilder::with_id("about", "About Markdown Editor").build(app)?)
+            let app_menu = SubmenuBuilder::new(app, "Markdown Live")
+                .item(&MenuItemBuilder::with_id("about", "About Markdown Live").build(app)?)
                 .separator()
                 .services()
                 .separator()
