@@ -134,9 +134,21 @@ function insertText(before, after = '') {
   const { from, to } = view.state.selection.main
   const selected = view.state.sliceDoc(from, to)
   const replacement = before + selected + after
+
+  let selAnchor, selHead
+  const placeholderIdx = after.indexOf('url')
+  if (selected.length > 0 && placeholderIdx !== -1) {
+    const urlStart = from + before.length + selected.length + placeholderIdx
+    selAnchor = urlStart
+    selHead = urlStart + 3
+  } else {
+    selAnchor = from + before.length
+    selHead = from + before.length + selected.length
+  }
+
   view.dispatch({
     changes: { from, to, insert: replacement },
-    selection: { anchor: from + before.length, head: from + before.length + selected.length },
+    selection: { anchor: selAnchor, head: selHead },
   })
   view.focus()
 }

@@ -301,6 +301,14 @@ Le frontend utilise `invoke('read_file_content', { path })` au lieu de `readText
 
 ---
 
+## 21. UX lien — sélection automatique du placeholder URL
+
+**Demande :** Après insertion d'un lien (texte sélectionné → clic sur "Link" ou Cmd+K), le curseur restait sur le texte du lien. Comportement souhaité : sélectionner "url" dans `(url)` pour pouvoir taper l'URL directement.
+
+**Solution :** Modification de `insertText()` dans `EditorPane.vue` — quand du texte est sélectionné et que `after` contient "url", la sélection post-insertion pointe sur le placeholder "url" au lieu du texte original. Même comportement pour l'insertion d'image (Cmd+Shift+K).
+
+---
+
 ## Résumé technique final
 
 | Composant | Technologie |
