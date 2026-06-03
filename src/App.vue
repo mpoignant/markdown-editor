@@ -40,7 +40,8 @@ const editorStore = useEditorStore()
 const settingsStore = useSettingsStore()
 
 const source = computed(() => editorStore.content)
-const { html: renderedHtml } = useMarkdownParser(source)
+const filePathRef = computed(() => editorStore.filePath)
+const { html: renderedHtml } = useMarkdownParser(source, filePathRef)
 
 const editorRef = ref(null)
 const previewRef = ref(null)

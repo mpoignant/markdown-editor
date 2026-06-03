@@ -17,6 +17,14 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [{ "path": "**" }]
     },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:scope",
+      "allow": ["**"]
+    },
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",

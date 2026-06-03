@@ -1,5 +1,6 @@
 import { computed, ref, watchEffect } from 'vue'
 import { marked } from 'marked'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 let prismReady = null
 
@@ -25,7 +26,17 @@ marked.setOptions({
   gfm: true,
 })
 
-export function useMarkdownParser(source) {
+function isRelativePath(src) {
+  return src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:') && !src.startsWith('asset://') && !src.startsWith('/')
+}
+
+function resolveImageSrc(src, fileDir) {
+  if (!fileDir || !isRelativePath(src)) return src
+  const absolutePath = fileDir + '/' + src
+  return convertFileSrc(absolutePath)
+}
+
+export function useMarkdownParser(source, filePath) {
   const html = ref('')
 
   watchEffect(async () => {
@@ -35,11 +46,20 @@ export function useMarkdownParser(source) {
       return
     }
 
+    const currentFilePath = filePath?.value
+    const fileDir = currentFilePath ? currentFilePath.replace(/[/\\][^/\\]*$/, '') : null
+
     const hasCodeBlock = /```\w+/.test(text)
+    const renderer = new marked.Renderer()
+
+    renderer.image = function ({ href, title, text: alt }) {
+      const resolvedSrc = resolveImageSrc(href, fileDir)
+      const titleAttr = title ? ` title="${title}"` : ''
+      return `<img src="${resolvedSrc}" alt="${alt || ''}"${titleAttr} />`
+    }
 
     if (hasCodeBlock) {
       const Prism = await loadPrism()
-      const renderer = new marked.Renderer()
       renderer.code = function ({ text: code, lang }) {
         if (lang && Prism.languages[lang]) {
           const highlighted = Prism.highlight(code, Prism.languages[lang], lang)
@@ -47,10 +67,9 @@ export function useMarkdownParser(source) {
         }
         return `<pre><code>${code}</code></pre>\n`
       }
-      html.value = marked.parse(text, { renderer })
-    } else {
-      html.value = marked.parse(text)
     }
+
+    html.value = marked.parse(text, { renderer })
   })
 
   return { html }
