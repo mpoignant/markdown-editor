@@ -13,6 +13,12 @@ export function useKeyboardShortcuts(actions) {
     } else if (mod && event.key === 'n') {
       event.preventDefault()
       actions.new()
+    } else if (mod && event.key === 't') {
+      event.preventDefault()
+      actions.newTab()
+    } else if (mod && event.key === 'w') {
+      event.preventDefault()
+      actions.closeTab()
     }
   }
 

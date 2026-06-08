@@ -5,6 +5,7 @@
     :data-theme="settingsStore.theme"
   >
     <Toolbar @format="onFormat" />
+    <TabBar />
     <div class="main-content">
       <div class="editor-pane">
         <EditorPane ref="editorRef" @cursor-move="onCursorMove" />
@@ -31,6 +32,7 @@ import { useSyncScroll } from './composables/useSyncScroll'
 import { useFileOperations } from './composables/useFileOperations'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import Toolbar from './components/Toolbar.vue'
+import TabBar from './components/TabBar.vue'
 import EditorPane from './components/EditorPane.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import StatusBar from './components/StatusBar.vue'
@@ -50,10 +52,21 @@ const { syncCursorToPreview } = useSyncScroll()
 
 const { newFile, openFile, saveFile, saveFileAs } = useFileOperations()
 
+function closeActiveTab() {
+  if (editorStore.isTabDirty(editorStore.activeTabId)) {
+    const name = editorStore.fileName
+    const confirmed = window.confirm(`"${name}" has unsaved changes. Close anyway?`)
+    if (!confirmed) return
+  }
+  editorStore.closeTab(editorStore.activeTabId)
+}
+
 useKeyboardShortcuts({
   save: saveFile,
   open: openFile,
   new: newFile,
+  newTab: () => editorStore.newFile(),
+  closeTab: closeActiveTab,
 })
 
 onMounted(async () => {
@@ -62,26 +75,21 @@ onMounted(async () => {
     await win.onCloseRequested(async (event) => {
       event.preventDefault()
 
-      if (!editorStore.isDirty) {
+      if (!editorStore.hasAnyDirty()) {
         await win.destroy()
         return
       }
 
       const result = await message(
-        'Le document a été modifié. Voulez-vous enregistrer avant de quitter ?',
+        'Des documents ont été modifiés. Voulez-vous quitter sans enregistrer ?',
         {
           title: 'Modifications non enregistrées',
           kind: 'warning',
-          buttons: { yes: 'Enregistrer', no: 'Ne pas enregistrer', cancel: 'Annuler' },
+          buttons: { yes: 'Quitter', no: 'Annuler' },
         }
       )
 
-      if (result === 'Enregistrer') {
-        await saveFile()
-        if (!editorStore.isDirty) {
-          await win.destroy()
-        }
-      } else if (result !== 'Annuler') {
+      if (result === 'Quitter') {
         await win.destroy()
       }
     })
@@ -135,10 +143,10 @@ onMounted(async () => {
       const paths = event.payload.paths
       if (!paths || paths.length === 0) return
 
-      const path = paths[0]
-      if (!path.match(/\.(md|markdown|txt)$/i)) return
-
-      await openFilePath(path)
+      for (const path of paths) {
+        if (!path.match(/\.(md|markdown|txt)$/i)) continue
+        await openFilePath(path)
+      }
     })
 
     await listen('open-file', async (event) => {
@@ -146,7 +154,6 @@ onMounted(async () => {
       if (path) await openFilePath(path)
     })
 
-    // Check if app was launched with a file argument
     const initialFile = await invoke('get_open_file_path')
     if (initialFile) {
       await openFilePath(initialFile)
@@ -157,9 +164,10 @@ onMounted(async () => {
 })
 
 async function openFilePath(path) {
-  if (editorStore.isDirty) {
-    const confirmed = window.confirm('Discard unsaved changes?')
-    if (!confirmed) return
+  const existing = editorStore.tabs.find(t => t.filePath === path)
+  if (existing) {
+    editorStore.switchTab(existing.id)
+    return
   }
 
   const content = await invoke('read_file_content', { path })

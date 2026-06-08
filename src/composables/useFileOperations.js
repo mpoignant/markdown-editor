@@ -16,10 +16,6 @@ export function useFileOperations() {
   }
 
   async function newFile() {
-    if (editorStore.isDirty) {
-      const confirmed = window.confirm('Discard unsaved changes?')
-      if (!confirmed) return
-    }
     editorStore.newFile()
     await updateWindowTitle()
   }
@@ -55,8 +51,11 @@ export function useFileOperations() {
     if (!path) return
 
     await writeTextFile(path, editorStore.content)
-    editorStore.filePath = path
-    editorStore.markSaved()
+    const tab = editorStore.activeTab
+    if (tab) {
+      tab.filePath = path
+      tab.savedContent = tab.content
+    }
     await updateWindowTitle()
   }
 

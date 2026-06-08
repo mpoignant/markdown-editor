@@ -19,6 +19,7 @@ const settingsStore = useSettingsStore()
 const wrapperRef = ref(null)
 let view = null
 let ignoreUpdate = false
+const stateCache = new Map()
 
 const theme = EditorView.theme({
   '&': {
@@ -69,43 +70,63 @@ const formatKeymap = [
   { key: 'Mod-Shift-h', run: () => { insertLinePrefix('## '); return true } },
 ]
 
+function getExtensions() {
+  return [
+    history(),
+    keymap.of([...formatKeymap, ...defaultKeymap, ...historyKeymap]),
+    markdown({ codeLanguages: languages }),
+    placeholder('Start writing Markdown...'),
+    theme,
+    themeColors,
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged && !ignoreUpdate) {
+        editorStore.setContent(update.state.doc.toString())
+      }
+      if (update.selectionSet) {
+        const pos = update.state.selection.main.head
+        const line = update.state.doc.lineAt(pos).number - 1
+        emit('cursor-move', line)
+      }
+    }),
+    EditorView.lineWrapping,
+  ]
+}
+
 function createState(doc) {
-  return EditorState.create({
-    doc,
-    extensions: [
-      history(),
-      keymap.of([...formatKeymap, ...defaultKeymap, ...historyKeymap]),
-      markdown({ codeLanguages: languages }),
-      placeholder('Start writing Markdown...'),
-      theme,
-      themeColors,
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged && !ignoreUpdate) {
-          editorStore.setContent(update.state.doc.toString())
-        }
-        if (update.selectionSet) {
-          const pos = update.state.selection.main.head
-          const line = update.state.doc.lineAt(pos).number - 1
-          emit('cursor-move', line)
-        }
-      }),
-      EditorView.lineWrapping,
-    ],
-  })
+  return EditorState.create({ doc, extensions: getExtensions() })
 }
 
 onMounted(() => {
+  const state = createState(editorStore.content)
+  stateCache.set(editorStore.activeTabId, state)
   view = new EditorView({
-    state: createState(editorStore.content),
+    state,
     parent: wrapperRef.value,
   })
 })
 
 onBeforeUnmount(() => {
   if (view) {
+    stateCache.set(editorStore.activeTabId, view.state)
     view.destroy()
     view = null
   }
+  stateCache.clear()
+})
+
+watch(() => editorStore.activeTabId, (newId, oldId) => {
+  if (!view || newId === oldId) return
+
+  stateCache.set(oldId, view.state)
+
+  let state = stateCache.get(newId)
+  if (!state) {
+    state = createState(editorStore.content)
+    stateCache.set(newId, state)
+  }
+
+  view.setState(state)
+  view.focus()
 })
 
 watch(() => editorStore.content, (newVal) => {
@@ -127,6 +148,14 @@ watch(() => settingsStore.editorFont, (font) => {
       EditorView.editorAttributes.of({ style: `font-family: ${font}` })
     ),
   })
+})
+
+watch(() => editorStore.tabs.length, () => {
+  for (const cachedId of stateCache.keys()) {
+    if (!editorStore.tabs.some(t => t.id === cachedId)) {
+      stateCache.delete(cachedId)
+    }
+  }
 })
 
 function insertText(before, after = '') {
@@ -253,4 +282,3 @@ function redoEditor() {
 
 defineExpose({ wrapperRef, insertText, toggleInlineFormat, insertLinePrefix, insertBlock, setHeadingLevel, undoEditor, redoEditor })
 </script>
-
