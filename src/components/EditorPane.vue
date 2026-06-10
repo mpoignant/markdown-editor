@@ -21,6 +21,7 @@ let view = null
 let ignoreUpdate = false
 let switchingTab = false
 const stateCache = new Map()
+const scrollCache = new Map()
 
 const theme = EditorView.theme({
   '&': {
@@ -120,6 +121,7 @@ watch(() => editorStore.activeTabId, (newId, oldId) => {
 
   switchingTab = true
   stateCache.set(oldId, view.state)
+  scrollCache.set(oldId, view.scrollDOM.scrollTop)
 
   let state = stateCache.get(newId)
   if (!state) {
@@ -128,6 +130,10 @@ watch(() => editorStore.activeTabId, (newId, oldId) => {
   }
 
   view.setState(state)
+  const savedScroll = scrollCache.get(newId)
+  if (savedScroll != null) {
+    view.scrollDOM.scrollTop = savedScroll
+  }
   switchingTab = false
   view.focus()
 }, { flush: 'sync' })
@@ -157,6 +163,7 @@ watch(() => editorStore.tabs.length, () => {
   for (const cachedId of stateCache.keys()) {
     if (!editorStore.tabs.some(t => t.id === cachedId)) {
       stateCache.delete(cachedId)
+      scrollCache.delete(cachedId)
     }
   }
 })
