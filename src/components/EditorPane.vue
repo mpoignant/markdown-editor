@@ -19,6 +19,7 @@ const settingsStore = useSettingsStore()
 const wrapperRef = ref(null)
 let view = null
 let ignoreUpdate = false
+let switchingTab = false
 const stateCache = new Map()
 
 const theme = EditorView.theme({
@@ -79,7 +80,7 @@ function getExtensions() {
     theme,
     themeColors,
     EditorView.updateListener.of((update) => {
-      if (update.docChanged && !ignoreUpdate) {
+      if (update.docChanged && !ignoreUpdate && !switchingTab) {
         editorStore.setContent(update.state.doc.toString())
       }
       if (update.selectionSet) {
@@ -117,6 +118,7 @@ onBeforeUnmount(() => {
 watch(() => editorStore.activeTabId, (newId, oldId) => {
   if (!view || newId === oldId) return
 
+  switchingTab = true
   stateCache.set(oldId, view.state)
 
   let state = stateCache.get(newId)
@@ -126,11 +128,12 @@ watch(() => editorStore.activeTabId, (newId, oldId) => {
   }
 
   view.setState(state)
+  switchingTab = false
   view.focus()
-})
+}, { flush: 'sync' })
 
 watch(() => editorStore.content, (newVal) => {
-  if (!view) return
+  if (!view || switchingTab) return
   const current = view.state.doc.toString()
   if (current !== newVal) {
     ignoreUpdate = true
