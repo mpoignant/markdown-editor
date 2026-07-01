@@ -1,4 +1,4 @@
-# Markdown Editor
+# Markdown Live
 
 A cross-platform desktop Markdown editor built with **Tauri 2** and **Vue.js 3**. Distraction-free writing with a live side-by-side preview.
 

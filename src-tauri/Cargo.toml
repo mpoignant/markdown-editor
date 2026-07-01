@@ -1,10 +1,10 @@
 [package]
-name = "markdown-editor"
+name = "markdown-live"
 version = "1.0.0"
 edition = "2021"
 
 [lib]
-name = "markdown_editor_lib"
+name = "markdown_live_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -13,7 +13,7 @@
         <p><strong>License:</strong> GPL v3</p>
         <p>
           <strong>Source:</strong>
-          <a href="#" @click.prevent="openGitHub">github.com/mpoignant/markdown-editor</a>
+          <a href="#" @click.prevent="openGitHub">github.com/mpoignant/markdown-live</a>
         </p>
       </div>
       <div class="about-credits">
@@ -41,9 +41,9 @@ function close() {
 
 async function openGitHub() {
   try {
-    await shellOpen('https://github.com/mpoignant/markdown-editor')
+    await shellOpen('https://github.com/mpoignant/markdown-live')
   } catch (e) {
-    window.open('https://github.com/mpoignant/markdown-editor', '_blank')
+    window.open('https://github.com/mpoignant/markdown-live', '_blank')
   }
 }
 
