@@ -3,7 +3,7 @@
     <div class="about-dialog">
       <img src="/icon.png" alt="Markdown Live" class="about-icon" />
       <h1 class="about-title">Markdown Live</h1>
-      <p class="about-version">Version 1.0.0</p>
+      <p class="about-version">Version 1.0.1</p>
       <p class="about-description">
         A cross-platform desktop Markdown editor with split-screen live preview,
         native file system integration, and light/dark themes.
