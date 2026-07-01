@@ -1,5 +1,9 @@
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::{Emitter, Manager, RunEvent};
+use tauri::Emitter;
+// `Manager` (state access) and `RunEvent::Opened` are only used by the macOS
+// file-association handler below.
+#[cfg(target_os = "macos")]
+use tauri::{Manager, RunEvent};
 use std::sync::Mutex;
 
 struct OpenFilePath(Mutex<Option<String>>);
@@ -120,20 +124,26 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let RunEvent::Opened { urls } = &event {
-            for url in urls {
-                let file_path = if url.scheme() == "file" {
-                    url.to_file_path().ok().map(|p| p.to_string_lossy().to_string())
-                } else {
-                    Some(url.to_string())
-                };
+    app.run(move |_app_handle, _event| {
+        // `RunEvent::Opened` (file opened via OS file associations, e.g. double-click)
+        // only exists on macOS. On Windows/Linux the initial file is handled via argv
+        // in the `run()` prologue above, so this block is macOS-only.
+        #[cfg(target_os = "macos")]
+        {
+            if let RunEvent::Opened { urls } = &_event {
+                for url in urls {
+                    let file_path = if url.scheme() == "file" {
+                        url.to_file_path().ok().map(|p| p.to_string_lossy().to_string())
+                    } else {
+                        Some(url.to_string())
+                    };
 
-                if let Some(fp) = file_path {
-                    if fp.ends_with(".md") || fp.ends_with(".markdown") || fp.ends_with(".txt") {
-                        let state = app_handle.state::<OpenFilePath>();
-                        *state.0.lock().unwrap() = Some(fp.clone());
-                        let _ = app_handle.emit("open-file", &fp);
+                    if let Some(fp) = file_path {
+                        if fp.ends_with(".md") || fp.ends_with(".markdown") || fp.ends_with(".txt") {
+                            let state = _app_handle.state::<OpenFilePath>();
+                            *state.0.lock().unwrap() = Some(fp.clone());
+                            let _ = _app_handle.emit("open-file", &fp);
+                        }
                     }
                 }
             }
